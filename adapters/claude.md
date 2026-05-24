@@ -6,8 +6,9 @@ argument-hint: "<pr-number> | status | resume | stop"
 
 # /copilot-review — Claude Code Adapter
 
-The canonical skill lives at the plugin root `SKILL.md`.
-Load and follow that file. This adapter maps Claude Code tool names.
+The canonical skill lives at `~/Documents/GitHub/copilot-review/SKILL.md`.
+Load and follow that file along with its `references/` directory.
+This adapter maps Claude Code tool names and provides Claude-specific notes.
 
 ## Tool Mapping
 
