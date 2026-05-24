@@ -2,6 +2,10 @@
 
 All commands use `gh api` with `--jq` for field extraction. Replace `{owner}`, `{repo}`, `{pr}` with actual values.
 
+**Required token permissions:** `pull-requests: read` (view reviews/comments), `pull-requests: write` (dismiss/re-request/reply), `actions: read` (CI checks).
+
+**Pagination:** Use `--paginate` on list endpoints to handle more than 100 items. Omitted from examples below for brevity but should be used in automation.
+
 ## Copilot Identity
 
 | Role | Login |
@@ -46,48 +50,49 @@ gh api "/repos/{owner}/{repo}/pulls/{pr}/comments?per_page=100" \
 
 ## Dismiss a Review
 
+The dismissals endpoint only accepts a `message` body field.
+
 ```bash
 gh api "/repos/{owner}/{repo}/pulls/{pr}/reviews/{review_id}/dismissals" \
   --method PUT \
-  -f message="Re-requesting review after changes" \
-  -f event="DISMISS"
+  -f message="Re-requesting review after changes"
 ```
+
+Note: a COMMENTED review (Copilot's default) cannot be dismissed. Only APPROVED or CHANGES_REQUESTED reviews support dismissal. If Copilot left a COMMENTED review, skip dismissal and proceed to re-request.
 
 ## Re-request Reviewers
 
-To re-add Copilot as a reviewer after dismissal, use the GraphQL API (REST does not support bot re-request):
+Primary approach — use REST to re-add Copilot as a reviewer:
 
-```bash
-gh api graphql -f query='
-mutation {
-  requestReviews(input: {
-    pullRequestId: "<PR_NODE_ID>",
-    teamReviewerIds: [],
-    userIds: []
-  }) {
-    pullRequest { url }
-  }
-}'
-```
-
-Note: The PR node ID can be obtained via:
-```bash
-gh api graphql -f query='
-query($owner: String!, $repo: String!, $number: Int!) {
-  repository(owner: $owner, name: $repo) {
-    pullRequest(number: $number) { id }
-  }
-}' -f owner="{owner}" -f repo="{repo}" -f number={pr}
-```
-
-**Alternative:** If the REST API works for re-requesting, use:
 ```bash
 gh api "/repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
   --method POST \
   -f "reviewers[]=copilot-pull-request-reviewer"
 ```
 
-Try REST first; fall back to GraphQL if it fails.
+If REST fails (e.g., bot accounts), use GraphQL. You need Copilot's node ID — query it first:
+
+```bash
+# First, find Copilot's node ID
+COPILOT_ID=$(gh api graphql -f query='
+query($query: String!) {
+  search(query: $query, type: USER, first: 1) {
+    edges { node { ... on User { id } } }
+  }
+}' -f query="copilot-pull-request-reviewer" --jq '.data.search.edges[0].node.id')
+
+# Then request review
+PR_ID=$(gh pr view {pr} --json id --jq '.id')
+gh api graphql -f query="
+mutation {
+  requestReviews(input: {
+    pullRequestId: \"$PR_ID\",
+    userIds: [\"$COPILOT_ID\"]
+  }) {
+    pullRequest { url }
+  }
+}"
+```
 
 ## Reply to a Review Comment
 
@@ -102,35 +107,60 @@ The API endpoint for replying is `POST /repos/{owner}/{repo}/pulls/{pr}/comments
 
 ## Resolve a Review Thread
 
-GitHub REST API does not directly support resolving review threads. Use GraphQL:
+GitHub REST API does not support resolving review threads. Use GraphQL.
+
+First, find the thread node ID for a given comment:
 
 ```bash
 gh api graphql -f query='
-mutation {
-  resolveReviewThread(input: {
-    threadId: "<THREAD_ID>"
-  }) {
-    thread { isResolved }
+query($owner: String!, $repo: String!, $pr: Int!, $commentId: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          comments(first: 1) {
+            nodes { databaseId }
+          }
+        }
+      }
+    }
   }
-}'
+}' -f owner="{owner}" -f repo="{repo}" -f pr={pr} -f commentId={comment_id} \
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].databaseId == {comment_id}) | .id'
 ```
 
-The thread ID can be obtained from the comment — it is the `pull_request_review_id` field.
+Then resolve the thread:
 
-**Alternative approach:** Replying to a thread and resolving can sometimes be combined. The thread is auto-resolved when the last comment includes a resolution hint. If GraphQL is not available, replying with the acceptance outcome and letting the PR author manually resolve is acceptable.
+```bash
+THREAD_ID="<from query above>"
+gh api graphql -f query='
+mutation($threadId: ID!) {
+  resolveReviewThread(input: { threadId: $threadId }) {
+    thread { isResolved }
+  }
+}' -f threadId="$THREAD_ID"
+```
 
 ## Check CI Status
 
+Tabular output (parse with grep/awk):
 ```bash
 gh pr checks {pr}
 ```
 
 Output format (tab-separated): `checkName\tstatus\tduration\turl`
 
-Parse status: `pass`, `fail`, `pending`, `skipped`, `neutral`, `cancelled`, `timed_out`, `action_required`
+Possible status values: `pass`, `fail`, `pending`, `skipped`, `neutral`, `cancelled`, `timed_out`, `action_required`
 
+Filter to failing checks:
 ```bash
-gh pr checks {pr} --json name,state,conclusion --jq '.[] | select(.conclusion != "SUCCESS" and .conclusion != "SKIPPED" and .conclusion != "NEUTRAL") | {name, conclusion}'
+gh pr checks {pr} | grep -v 'pass\t' | grep -v 'skipped\t' | grep -v 'neutral\t'
+```
+
+JSON output (valid fields: `name`, `state`, `bucket`, `completedAt`, `description`, `event`, `link`, `startedAt`, `workflow`):
+```bash
+gh pr checks {pr} --json name,state --jq '.[] | select(.state != "SUCCESS" and .state != "SKIPPED" and .state != "NEUTRAL") | {name, state}'
 ```
 
 ## Get Check Run Logs
