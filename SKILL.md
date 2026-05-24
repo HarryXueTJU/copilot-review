@@ -57,6 +57,7 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
      "handledComments": {},
      "roundSummaries": [],
      "ciStatus": "unknown",
+     "ciAttempts": 0,
      "ciFixFiles": [],
      "smartExit": { "consecutiveNoAction": 0 }
    }
@@ -163,25 +164,34 @@ ordered to avoid conflicts):
 
 ### State: WAIT_CI
 
-1. **Check CI status:**
+1. **Wait for CI to start.** After push, wait 30 seconds for GitHub Actions
+   to pick up the new commit.
+
+2. **Check CI status** (poll every 30s until all checks complete):
    ```bash
-   gh pr checks {pr} | grep -v 'pass\t' | grep -v 'skipped\t' | grep -v 'neutral\t'
+   gh pr checks {pr} --json name,state --jq '.[] | select(.state != "SUCCESS" and .state != "SKIPPED" and .state != "NEUTRAL") | {name, state}'
    ```
+   If any check is still `"PENDING"` or `"IN_PROGRESS"`, wait 30s and re-check.
+   If all checks are `"SUCCESS"`, `"SKIPPED"`, or `"NEUTRAL"` → CI is green.
 
-2. **If any check is failing:**
-   - Read the failing check logs via `gh run view <run_id> --log`
-   - Analyze the failure from the log output
-   - If fixable: edit files, lint, commit with `ci(scope): fix <check name>`,
-     push, append fixed files to `ciFixFiles` in state
-   - Go back to step 1 (re-check CI)
-   - If not fixable (flaky test, infra issue): report to user, pause the loop
+3. **If any check is failing** (max 3 fix attempts):
+   - Get the failing workflow run ID:
+     ```bash
+     gh pr checks {pr} --json name,state,detailsUrl --jq '.[] | select(.state == "FAILURE")'
+     ```
+   - Read logs: `gh run view <run_id_from_url> --log 2>&1 | tail -100`
+   - Analyze failure and attempt to fix.
+   - If fixable (and `ciAttempts < 3`): edit files, lint, commit with
+     `ci(scope): fix <check name>`, push, increment `ciAttempts`, append
+     fixed files to `ciFixFiles`, go back to step 1.
+   - If `ciAttempts >= 3` or not fixable (flaky test, infra issue): report
+     to user and pause the loop.
 
-3. **Once CI is green:**
-   - Compare `ciFixFiles` with file paths in `handledComments` where
-     `action == "accepted"`
-   - **If overlap** (any CI-fixed file matches a commented file) →
-     transition to RE_REQUEST
-   - **If no overlap** → transition to COLLECT
+4. **Once CI is green:**
+   - **Always transition to RE_REQUEST** — Copilot must be explicitly
+     re-requested to review the new commits. The `ciFixFiles` overlap check
+     determines whether to add a note about stale review context but does not
+     skip the re-request.
 
 ### State: RE_REQUEST
 
@@ -193,10 +203,15 @@ ordered to avoid conflicts):
    ```
    Note: COMMENTED reviews cannot be dismissed. Skip dismissal, just re-request.
 
-2. **Update state:** increment round, save round summary, clear `ciFixFiles`,
-   reset `lastReviewId` to null, reset `consecutiveNoAction` to 0.
+2. **If `ciFixFiles` overlaps with commented files,** the previous Copilot
+   review may be stale. This is informational — the re-request gives Copilot
+   a fresh diff context.
 
-3. **Transition to COLLECT.**
+3. **Update state:** increment round, save round summary, clear `ciFixFiles`,
+   reset `ciAttempts` to 0, reset `lastReviewId` to null, reset
+   `consecutiveNoAction` to 0. Save state file.
+
+4. **Transition to COLLECT.**
 
 ### State: DONE
 
@@ -252,8 +267,10 @@ cat ~/.claude/copilot-review/${owner}-${repo}-${prNumber}.json | jq '{
 
 ## Sub-command: `resume`
 
-Read the state file. If `currentState` is valid, begin execution from that
-state. Otherwise, start from INIT.
+Read the state file. If `currentState` is one of the valid states
+(`COLLECT`, `EVALUATE`, `IMPLEMENT`, `WAIT_CI`, `RE_REQUEST`),
+begin execution from that state. Otherwise (unknown state, `DONE`, or `INIT`),
+start from INIT.
 
 ## Sub-command: `stop`
 
