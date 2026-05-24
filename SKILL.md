@@ -13,6 +13,22 @@ use `gh` CLI.
 Read `references/github-api.md` for exact `gh` command recipes.
 Read `references/evaluation-prompt.md` for comment evaluation instructions.
 
+## Prerequisites
+
+These must be available and working before starting:
+
+| Tool | Check | Required For |
+|------|-------|-------------|
+| `gh` CLI | `gh auth status` | All GitHub API operations |
+| `git` | `git --version` | Committing changes, discovering PR |
+| `jq` | `jq --version` | Parsing API responses and state files |
+
+**gh auth scopes needed:** `pull-requests: read` (view reviews/comments),
+`pull-requests: write` (dismiss/re-request/reply), `actions: read` (CI checks).
+
+Run these checks before entering the state machine. If any tool is missing,
+report which one and how to install it, then stop.
+
 ## Sub-commands
 
 | Command | Description |
@@ -33,6 +49,14 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
 ```
 
 ### State: INIT
+
+0. **Check prerequisites.** Verify required tools exist:
+   ```bash
+   gh auth status 2>&1 || { echo "gh CLI not authenticated. Run: gh auth login"; exit 1; }
+   git --version 2>&1 || { echo "git not found."; exit 1; }
+   jq --version 2>&1 || { echo "jq not found. Install: brew install jq"; exit 1; }
+   ```
+   If any check fails, report the missing tool and stop. Do not proceed.
 
 1. **Determine PR.** If `<pr-number>` was passed, use it. Otherwise discover from git:
    ```bash
