@@ -1,11 +1,16 @@
 # Copilot Comment Evaluation Prompt
 
-Feed each unhandled Copilot comment through this evaluation. The agent MUST:
+Evaluate Copilot review comments that have not yet been handled (i.e., their ID
+is absent from `handledComments` in the state file).
 
-1. Read the source file around the commented line
-2. Read the nearest `AGENTS.md` for project conventions
-3. Check the diff hunk for context on what changed
-4. Output a structured JSON decision
+## Context Gathering
+
+Before evaluating, gather all relevant context:
+
+1. Read the source file at `{path}` around `{line}` — include ~20 lines of context
+2. Read the nearest `AGENTS.md` (walk up from the file's directory; if none
+   found, note that and proceed without project-specific conventions)
+3. Review the diff hunk for what changed at this location
 
 ## Input
 
@@ -13,37 +18,48 @@ Feed each unhandled Copilot comment through this evaluation. The agent MUST:
 - **File path:** `{path}`
 - **Line:** `{line}`
 - **Diff hunk:** `{diff_hunk}`
-- **Source code around line:** read from the file at `{path}`, include ~20 lines of context
-- **Project conventions:** read from nearest `AGENTS.md`
-- **Previously rejected comments:** `{priorRejections}` (JSON array of `{file, line, topic}`)
+- **Current round:** `{round}` (from state file)
+- **Previously rejected comments:** `{priorRejections}` (JSON array of
+  `{file, line, topic}` from `handledComments` where `action == "rejected"`)
 
 ## Evaluation Rules
 
-Apply these rules in order (from `receiving-code-review` skill):
+Apply these rules in order. The first matching rule determines the outcome:
 
-1. **Verify against codebase**: Does the suggested change actually fix a real problem? Read the source file and surrounding code to confirm.
+1. **Repeat detection**: Same file:line and same topic as a previously rejected
+   comment. → `decision: "reject"`, cite the prior reasoning.
 
-2. **Check for breakage**: Would this change break existing functionality, tests, or conventions?
+2. **Breakage check**: Would this change break existing functionality, tests, or
+   conventions? → `decision: "reject"`, explain what would break.
 
-3. **YAGNI check**: Is this adding a feature or abstraction that isn't needed? If nothing calls it, reject.
+3. **YAGNI check**: Is this adding a feature or abstraction that has no callers?
+   → `decision: "reject"`, note the feature is unused.
 
-4. **Confidence assessment**: How certain are you that this change is correct? If the comment is ambiguous, the codebase context is unclear, or the suggestion could go either way, your confidence is LOW.
-
-5. **Repeat detection**: Is this the same topic at the same file:line as a previously rejected comment? If yes, auto-reject.
+4. **Confidence assessment**: Is the codebase context clear enough to be certain?
+   If the comment is ambiguous, the surrounding code is unclear, or the
+   suggestion could reasonably go either way → `confidence: "low"`.
 
 ## Decision Rules
 
-| Condition | Action |
-|-----------|--------|
-| confidence = "low" | `decision: "reject"`, explain uncertainty |
-| Same file:line + same topic as prior rejection | `decision: "reject"`, cite previous reasoning |
-| severity = "minor" + round >= 3 | `decision: "reject"`, reason: "diminishing returns" |
-| severity = "critical" | `decision: "accept"` regardless of confidence |
-| decision = "reject" | Provide technical reasoning in `replyText` |
+Apply these rules in order (first match wins). Higher rows have priority.
+
+| Priority | Condition | Action |
+|----------|-----------|--------|
+| 1 | severity = "critical" | `decision: "accept"` — always accept, regardless of confidence |
+| 2 | Same file:line + same topic as prior rejection | `decision: "reject"`, cite previous reasoning |
+| 3 | confidence = "low" and severity != "critical" | `decision: "reject"`, explain the uncertainty |
+| 4 | severity = "minor" + round >= 3 | `decision: "reject"`, reason: "diminishing returns" |
+| 5 | severity = "important" + confidence = "high" | `decision: "accept"` — confirmed bug or gap |
+| 6 | (default — no condition above matched) | `decision: "accept"` — clearly beneficial change |
+
+The `replyText` field must include either the action being taken (accepted) or
+the technical reason for rejection.
 
 ## Output Format
 
 Return ONLY a JSON object (no markdown fences, no surrounding text):
+
+For accepted:
 
 ```json
 {
@@ -51,7 +67,7 @@ Return ONLY a JSON object (no markdown fences, no surrounding text):
   "severity": "important",
   "confidence": "high",
   "reasoning": "The null check is genuinely missing — `result` can be undefined at line 38 as the previous assignment uses optional chaining without a fallback.",
-  "replyText": "Added null guard at line 42. [commit: <sha>]"
+  "replyText": "Fixed by adding null guard at line 42."
 }
 ```
 
@@ -62,16 +78,18 @@ For rejected:
   "decision": "reject",
   "severity": "minor",
   "confidence": "high",
-  "reasoning": "The suggested rename from `handleTimedOutCallbacks` to `handleTimedOutCallbacksInternal` violates the project naming convention — internal methods use a leading underscore prefix per AGENTS.md.",
-  "replyText": "The current name follows project convention. Internal visibility is handled by the `private` keyword, not name suffixing. See AGENTS.md naming conventions."
+  "reasoning": "The suggested rename violates the project naming convention — internal methods use a leading underscore prefix per AGENTS.md.",
+  "replyText": "The current name follows project convention. Internal visibility is handled by the `private` keyword, not name suffixing."
 }
 ```
 
 ## Severity Definitions
 
-- **critical**: Security vulnerability, data loss, crash, broken core functionality. Always accept.
-- **important**: Logic bug, missing error handling, test gap, performance issue. Accept if confident.
-- **minor**: Naming suggestion, style preference, comment clarity, code organization. Accept only if clearly better.
+- **critical**: Security vulnerability, data loss, crash, broken core
+  functionality. Always accept.
+- **important**: Logic bug, missing error handling, test gap, performance issue.
+- **minor**: Naming suggestion, style preference, comment clarity, code
+  organization. Accept only if clearly better.
 
 ## No Performative Agreement
 
