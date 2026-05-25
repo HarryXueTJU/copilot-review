@@ -268,28 +268,21 @@ ordered to avoid conflicts):
 
 ### State: RE_REQUEST
 
-1. **Assign Copilot to the PR:**
+1. **Trigger Copilot re-review via comment:**
    ```bash
-   gh pr edit {pr} --repo {owner}/{repo} --add-assignee "@copilot"
+   gh pr comment {pr} --repo {owner}/{repo} --body "@copilot review this PR"
    ```
-   This ensures Copilot appears as assigned in the PR sidebar (UI parity).
+   The `@copilot review this PR` phrasing triggers a full PR re-review without
+   scoping to a specific commit — it asks Copilot to evaluate the PR as a whole.
+   Bare `@copilot` without context causes Copilot to ask for clarification.
 
-2. **Trigger Copilot re-review via comment:**
-   ```bash
-   gh pr comment {pr} --repo {owner}/{repo} --body "@copilot"
-   ```
-   No qualifiers — `@copilot` alone triggers a full PR re-review. Adding framing
-   like "review commit X" risks scoping Copilot to a partial diff. `@copilot`'s
-   default behavior is to review all changes on the PR.
+   Copilot responds with review comments or issue comments. COLLECT scans both.
 
-   The `@copilot` mention triggers Copilot to review the PR and post feedback
-   as review comments or issue comments. COLLECT scans both sources.
-
-3. **Update state:** increment round, save round summary, clear `ciFixFiles`,
+2. **Update state:** increment round, save round summary, clear `ciFixFiles`,
    reset `ciAttempts` to 0, reset `lastReviewId` to null, reset
    `consecutiveNoAction` to 0. Save state file.
 
-4. **Transition to COLLECT.**
+3. **Transition to COLLECT.**
 
 ### State: DONE
 
