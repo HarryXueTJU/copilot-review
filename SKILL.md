@@ -85,6 +85,8 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
      "ciFixFiles": [],
      "conflictAttempts": 0,
      "conflictFiles": [],
+     "ciDurationMs": null,
+     "copilotPollCount": 0,
      "smartExit": { "consecutiveNoAction": 0 }
    }
    ```
@@ -165,7 +167,11 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
 8. **If no unhandled comments and `round > 0`:**
    - Increment `consecutiveNoAction` in state.
    - **Smart exit check:** If `consecutiveNoAction >= 2`, transition to DONE.
-   - Otherwise: wait 30 seconds, then re-enter COLLECT (go to step 0).
+   - Otherwise: poll for new Copilot feedback every 30 seconds, up to 20
+     times (10 minutes total). On each poll, re-fetch reviews and comments
+     (steps 1-5). If Copilot responds within the window, process normally.
+     If all 20 polls pass with no response, record the timeout and
+     increment `consecutiveNoAction`, then do the smart exit check.
 
 ### State: EVALUATE
 
@@ -234,15 +240,21 @@ ordered to avoid conflicts):
 
 ### State: WAIT_CI
 
-1. **Wait for CI to start.** After push, wait 30 seconds for GitHub Actions
-   to pick up the new commit.
+1. **Wait for CI.** After push, poll for CI completion:
 
-2. **Check CI status** (poll every 30s until all checks complete):
+   If `ciDurationMs` is set in state (from a previous round), skip-ahead:
+   wait `ciDurationMs - 60s` before starting to poll, minimum 30s. This
+   avoids wasting polls on repos with long CI pipelines.
+
    ```bash
    gh pr checks {pr} --json name,state --jq '.[] | select(.state != "SUCCESS" and .state != "SKIPPED" and .state != "NEUTRAL") | {name, state}'
    ```
-   If any check is still `"PENDING"` or `"IN_PROGRESS"`, wait 30s and re-check.
-   If all checks are `"SUCCESS"`, `"SKIPPED"`, or `"NEUTRAL"` → CI is green.
+   Poll every 30s. If any check is `"PENDING"` or `"IN_PROGRESS"`, wait and
+   re-check. If all are `"SUCCESS"`, `"SKIPPED"`, or `"NEUTRAL"` → green.
+
+2. **Record CI duration** when all checks pass: note the elapsed wall-clock
+   time since push and store it as `ciDurationMs` in the state file for
+   future rounds.
 
 3. **If any check is failing** (max 3 fix attempts):
    - Get the failing workflow run ID:
