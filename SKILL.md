@@ -146,14 +146,28 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
      --jq '.[] | select(.pull_request_review_id == {review_id} and .user.login == "Copilot" and .in_reply_to_id == null) | {id, body, path, line, diff_hunk}'
    ```
 
-5. **Cross-reference with `handledComments`** — skip already-handled IDs.
+5. **Also fetch Copilot issue comments.** Copilot may respond to `@copilot`
+   mentions as issue comments rather than review comments. Scan both:
+
+   ```bash
+   gh api "/repos/{owner}/{repo}/issues/{pr}/comments?per_page=100" \
+     --jq '.[] | select(.user.login == "Copilot" and .in_reply_to_id == null) | {id, body, created_at}'
+   ```
+
+   Merge with the review-comment list from step 4. Review comments carry
+   `path` and `line` context and take priority during evaluation. When an
+   issue comment references a file path in its body, extract that context
+   for the EVALUATE phase. Cross-reference both sources with
+   `handledComments`.
+
+6. **Cross-reference with `handledComments`** — skip already-handled IDs.
    Copy any new comments to a working list for EVALUATE.
 
-6. **If no unhandled comments found in any new review:**
+7. **If no unhandled comments found in any new review:**
    update `lastReviewId` to the latest review ID, increment
    `consecutiveNoAction`, do smart exit check, wait and re-enter COLLECT.
 
-7. **If unhandled comments exist:** save them to a working list, update
+8. **If unhandled comments exist:** save them to a working list, update
    `lastReviewId` to the latest review ID, transition to EVALUATE.
 
 ### State: EVALUATE
