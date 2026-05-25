@@ -219,17 +219,22 @@ ordered to avoid conflicts):
 
 ### State: RE_REQUEST
 
-1. **Re-request Copilot review:**
+1. **Assign Copilot to the PR:**
    ```bash
-   gh api "/repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
-     --method POST \
-     -f "reviewers[]=copilot-pull-request-reviewer"
+   gh pr edit {pr} --repo {owner}/{repo} --add-assignee "@copilot"
    ```
-   Note: COMMENTED reviews cannot be dismissed. Skip dismissal, just re-request.
+   This ensures Copilot appears as assigned in the PR sidebar (UI parity).
 
-2. **If `ciFixFiles` overlaps with commented files,** the previous Copilot
-   review may be stale. This is informational — the re-request gives Copilot
-   a fresh diff context.
+2. **Trigger Copilot re-review via comment:**
+   ```bash
+   gh pr comment {pr} --repo {owner}/{repo} --body "@copilot"
+   ```
+   No qualifiers — `@copilot` alone triggers a full PR re-review. Adding framing
+   like "review commit X" risks scoping Copilot to a partial diff. `@copilot`'s
+   default behavior is to review all changes on the PR.
+
+   Note: This creates an issue comment, not a review comment. The COLLECT state
+   scans both sources (see COLLECT state updates).
 
 3. **Update state:** increment round, save round summary, clear `ciFixFiles`,
    reset `ciAttempts` to 0, reset `lastReviewId` to null, reset
