@@ -83,6 +83,8 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
      "ciStatus": "unknown",
      "ciAttempts": 0,
      "ciFixFiles": [],
+     "conflictAttempts": 0,
+     "conflictFiles": [],
      "smartExit": { "consecutiveNoAction": 0 }
    }
    ```
@@ -90,6 +92,34 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
 3. **Transition to COLLECT.**
 
 ### State: COLLECT
+
+0. **Check for merge conflicts.** Conflicts can arise at any time (other PRs
+   merge, main evolves). Ensure the PR is mergeable before Copilot reviews it.
+
+   ```bash
+   gh pr view {pr} --repo {owner}/{repo} --json mergeable --jq '.mergeable'
+   ```
+
+   If `mergeable` is `"CONFLICTING"`:
+   - `git fetch origin {base}` (where `{base}` is the PR's base branch)
+   - `git merge origin/{base}` — this produces conflict markers in affected files
+   - Read each conflicted file. When two branches independently add different
+     blocks (non-overlapping), keep both. When the same lines differ, prefer
+     `origin/{base}` structure and add our changes on top.
+   - `git add <conflicted files>`
+   - `git commit -m "chore: merge {base}, resolve conflicts"`
+   - `git push`
+   - Increment `conflictAttempts` in state file. Append file names to
+     `conflictFiles`.
+   - If `conflictAttempts >= 3`: report unresolvable conflict to user and
+     pause the loop (transition to DONE with exit reason
+     `"unresolvable conflict"`).
+   - Re-check `mergeable`. If still `"CONFLICTING"`, loop back to the merge step.
+
+   If `mergeable` is `null` or `"UNKNOWN"`: the merge check hasn't completed
+   yet. Wait 10 seconds and re-check, up to 5 times.
+
+   Once `mergeable` is `"MERGEABLE"`, reset `conflictAttempts` to 0 and proceed.
 
 1. **Fetch Copilot reviews.**
    ```bash
