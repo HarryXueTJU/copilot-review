@@ -265,21 +265,35 @@ ordered to avoid conflicts):
 
 ### State: RE_REQUEST
 
-1. **Trigger Copilot re-review via comment:**
+1. **Get PR node ID:**
+   ```bash
+   prId=$(gh pr view {pr} --repo {owner}/{repo} --json id --jq '.id')
+   ```
+
+2. **Request Copilot review via GraphQL:**
+   ```bash
+   gh api graphql --raw-field 'query=mutation($prId: ID!) {
+     requestReviewsByLogin(input: {
+       pullRequestId: $prId,
+       botLogins: ["copilot-pull-request-reviewer[bot]"]
+     }) { pullRequest { url } }
+   }' -f prId="$prId"
+   ```
+   This is the same GraphQL mutation the GitHub UI uses when clicking
+   "Request Copilot review". The `botLogins` field accepts Copilot's login
+   with the `[bot]` suffix — this is the key difference from the standard
+   `requestReviews` mutation which only accepts User nodes.
+
+3. **If GraphQL fails,** fall back to a PR comment:
    ```bash
    gh pr comment {pr} --repo {owner}/{repo} --body "@copilot review this PR"
    ```
-   The `@copilot review this PR` phrasing triggers a full PR re-review without
-   scoping to a specific commit — it asks Copilot to evaluate the PR as a whole.
-   Bare `@copilot` without context causes Copilot to ask for clarification.
 
-   Copilot responds with review comments or issue comments. COLLECT scans both.
-
-2. **Update state:** increment round, save round summary, clear `ciFixFiles`,
+4. **Update state:** increment round, save round summary, clear `ciFixFiles`,
    reset `ciAttempts` to 0, reset `lastReviewId` to null, reset
    `consecutiveNoAction` to 0. Save state file.
 
-3. **Transition to COLLECT.**
+5. **Transition to COLLECT.**
 
 ### State: DONE
 
