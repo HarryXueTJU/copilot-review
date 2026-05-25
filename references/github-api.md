@@ -48,52 +48,6 @@ gh api "/repos/{owner}/{repo}/pulls/{pr}/comments?per_page=100" \
   --jq '.[] | select(.pull_request_review_id == {review_id} and .user.login == "Copilot") | {id, body, path, line, diff_hunk}'
 ```
 
-## Dismiss a Review
-
-The dismissals endpoint only accepts a `message` body field.
-
-```bash
-gh api "/repos/{owner}/{repo}/pulls/{pr}/reviews/{review_id}/dismissals" \
-  --method PUT \
-  -f message="Re-requesting review after changes"
-```
-
-Note: a COMMENTED review (Copilot's default) cannot be dismissed. Only APPROVED or CHANGES_REQUESTED reviews support dismissal. If Copilot left a COMMENTED review, skip dismissal and proceed to re-request.
-
-## Re-request Reviewers
-
-Primary approach — use REST to re-add Copilot as a reviewer:
-
-```bash
-gh api "/repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
-  --method POST \
-  -f "reviewers[]=copilot-pull-request-reviewer"
-```
-
-If REST fails (e.g., bot accounts), use GraphQL. You need Copilot's node ID — query it first:
-
-```bash
-# First, find Copilot's node ID
-COPILOT_ID=$(gh api graphql -f query='
-query($query: String!) {
-  search(query: $query, type: USER, first: 1) {
-    edges { node { ... on User { id } } }
-  }
-}' -f query="copilot-pull-request-reviewer" --jq '.data.search.edges[0].node.id')
-
-# Then request review
-PR_ID=$(gh pr view {pr} --json id --jq '.id')
-gh api graphql -f query="
-mutation {
-  requestReviews(input: {
-    pullRequestId: \"$PR_ID\",
-    userIds: [\"$COPILOT_ID\"]
-  }) {
-    pullRequest { url }
-  }
-}"
-```
-
 ## Reply to a Review Comment
 
 ```bash
@@ -141,6 +95,46 @@ mutation($threadId: ID!) {
   }
 }' -f threadId="$THREAD_ID"
 ```
+
+## Request Copilot Review (Re-request)
+
+Assign Copilot to the PR and trigger a re-review:
+
+```bash
+# Assign Copilot (makes it visible in PR sidebar)
+gh pr edit {pr} --repo {owner}/{repo} --add-assignee "@copilot"
+
+# Trigger review via @copilot mention (no qualifiers — reviews full PR)
+gh pr comment {pr} --repo {owner}/{repo} --body "@copilot"
+```
+
+## Check for Merge Conflicts
+
+```bash
+gh pr view {pr} --repo {owner}/{repo} --json mergeable,baseRefName \
+  --jq '{mergeable, base: .baseRefName}'
+```
+
+Possible `mergeable` values: `"MERGEABLE"` (clean), `"CONFLICTING"` (needs resolution),
+`"UNKNOWN"` (still computing), `null` (not yet evaluated).
+
+If `"CONFLICTING"`:
+- `git stash && git fetch origin {base} && git merge origin/{base}`
+- Resolve conflict markers, commit, push
+- Wait 15s for re-evaluation, re-check
+- If still conflicting after 3 attempts, report to user
+
+## List Issue Comments (for Copilot responses)
+
+Copilot often responds to `@copilot` mentions as issue comments, not review
+comments. Fetch both:
+
+```bash
+gh api "/repos/{owner}/{repo}/issues/{pr}/comments?per_page=100" \
+  --jq '.[] | select(.user.login == "Copilot" and .in_reply_to_id == null) | {id, body, created_at}'
+```
+
+Filter: `user.login == "Copilot"` and `in_reply_to_id == null` (top-level only).
 
 ## Check CI Status
 
