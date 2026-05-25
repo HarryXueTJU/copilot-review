@@ -277,12 +277,19 @@ ordered to avoid conflicts):
 
 ### State: RE_REQUEST
 
-1. **Get PR node ID:**
+1. **Save existing reviewers.** `requestReviewsByLogin` may replace existing
+   review requests, so capture them first:
+   ```bash
+   existing=$(gh api "repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
+     --jq '{users: [.users[].login], teams: [.teams[].slug]}')
+   ```
+
+2. **Get PR node ID:**
    ```bash
    prId=$(gh pr view {pr} --repo {owner}/{repo} --json id --jq '.id')
    ```
 
-2. **Request Copilot review via GraphQL:**
+3. **Request Copilot review via GraphQL:**
    ```bash
    gh api graphql --raw-field 'query=mutation($prId: ID!) {
      requestReviewsByLogin(input: {
@@ -296,16 +303,31 @@ ordered to avoid conflicts):
    with the `[bot]` suffix — this is the key difference from the standard
    `requestReviews` mutation which only accepts User nodes.
 
-3. **If GraphQL fails,** fall back to a PR comment:
+4. **Restore existing reviewers** that may have been removed:
+   ```bash
+   # Re-add user reviewers
+   for user in $(echo "$existing" | jq -r '.users[]'); do
+     gh api "repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
+       --method POST -f "reviewers[]=$user" 2>/dev/null
+   done
+   # Re-add team reviewers
+   for team in $(echo "$existing" | jq -r '.teams[]'); do
+     gh api "repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
+       --method POST -f "team_reviewers[]=$team" 2>/dev/null
+   done
+   ```
+
+5. **If GraphQL fails,** fall back to a PR comment:
    ```bash
    gh pr comment {pr} --repo {owner}/{repo} --body "@copilot review this PR"
    ```
+   (The fallback does not disturb existing reviewers.)
 
-4. **Update state:** increment round, save round summary, clear `ciFixFiles`,
+6. **Update state:** increment round, save round summary, clear `ciFixFiles`,
    reset `ciAttempts` to 0, reset `lastReviewId` to null, reset
    `consecutiveNoAction` to 0. Save state file.
 
-5. **Transition to COLLECT.**
+7. **Transition to COLLECT.**
 
 ### State: DONE
 
@@ -381,3 +403,57 @@ Set `currentState` to `"DONE"` in the state file, write an exit reason of
 - If CI fix introduces new failures, record the attempt and try up to 3 times
   before asking the user.
 - If `gh` is not authenticated, report and stop.
+
+---
+
+## Platform Tool Mapping
+
+This section maps the skill's generic tool references to each platform's
+specific tool names. Each platform loads its own adapter from `adapters/`,
+but the canonical skill content above is shared.
+
+### Claude Code
+
+| Skill Reference | Claude Code Tool |
+|----------------|-----------------|
+| `bash` / `gh` | `Bash` |
+| `read file` | `Read` |
+| `edit file` | `Edit` |
+| `write file` | `Write` |
+| `spawn subagent` | `Agent` with `subagent_type: "general-purpose"` |
+
+- **State file:** Read/write via `Read`/`Write` tools at `.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
+- **Parallel evaluation:** Use `Agent` with `subagent_type: "general-purpose"` for independent comment evaluation.
+- **File editing:** Use `Edit` with exact `old_string` / `new_string`. Always `Read` the file first.
+- **Merge conflicts:** Resolve with `Bash` running `git` commands, and `Edit` for conflict markers.
+- **Session persistence:** If session ends mid-loop, state file allows resuming with `Skill("copilot-review", "resume")`.
+
+### Copilot CLI
+
+| Skill Reference | Copilot CLI Tool |
+|----------------|-----------------|
+| `bash` / `gh` | `shell` |
+| `read file` | `read_file` |
+| `edit file` | `edit_file` |
+| `write file` | `write_file` |
+| `spawn subagent` | `task` with `type: "local"` |
+
+### Codex
+
+| Skill Reference | Codex Tool |
+|----------------|-----------|
+| `bash` / `gh` | `RunShellScript` |
+| `read file` | `ReadFile` |
+| `edit file` | `ApplyEdits` |
+| `write file` | `WriteFile` |
+| `spawn subagent` | `Agent` |
+
+### Gemini CLI
+
+| Skill Reference | Gemini CLI Tool |
+|----------------|----------------|
+| `bash` / `gh` | `run_shell_command` |
+| `read file` | `read_file` |
+| `edit file` | `replace_in_file` |
+| `write file` | `write_file` |
+| `spawn subagent` | `dispatch_agent` |
