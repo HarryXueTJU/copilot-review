@@ -24,6 +24,6 @@ This adapter maps Claude Code tool names and provides Claude-specific notes.
 
 - **Parallel evaluation:** Use the `Agent` tool to spawn subagents for parallel comment evaluation. Each subagent evaluates one comment independently.
 - **File editing:** Use `Edit` with exact `old_string` / `new_string`. Always `Read` the file first.
-- **State file:** Read/write via `Read`/`Write` tools at `~/.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
+- **State file:** Read/write via `Read`/`Write` tools at `.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
 - **No `gh` tool:** Claude Code does not have a dedicated `gh` tool — use `Bash` for all `gh` commands.
 - **Session persistence:** If the session ends mid-loop, state file allows resuming with `Skill("copilot-review", "resume")`.

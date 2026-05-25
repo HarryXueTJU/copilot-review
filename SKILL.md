@@ -7,7 +7,7 @@ argument-hint: "<pr-number> | status | resume | stop"
 # /copilot-review — Automated Copilot PR Review Loop
 
 State-machine-driven skill. One state file per PR at
-`~/.claude/copilot-review/<owner>-<repo>-<prNumber>.json`. All GitHub operations
+`.claude/copilot-review/<owner>-<repo>-<prNumber>.json`. All GitHub operations
 use `gh` CLI.
 
 Read `references/github-api.md` for exact `gh` command recipes.
@@ -68,7 +68,7 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
    Otherwise prompt the user for the PR number.
 
 2. **Load or create state file.**
-   Path: `~/.claude/copilot-review/${owner}-${repo}-${prNumber}.json`
+   Path: `.claude/copilot-review/${owner}-${repo}-${prNumber}.json`
    If it exists, read it. If not, create with:
    ```json
    {
@@ -135,40 +135,37 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
 2. **Filter to new reviews** (id > `lastReviewId` from state file, or all if
    `lastReviewId` is null).
 
-3. **If no new reviews:**
-   - Increment `consecutiveNoAction` in state.
-   - **Smart exit check:** If `consecutiveNoAction >= 2`, transition to DONE.
-   - Otherwise: wait 120 seconds, then re-enter COLLECT (go to step 1).
-
-4. **For each new review, fetch Copilot comments:**
+3. **For each new review, fetch Copilot review comments:**
    ```bash
    gh api "/repos/{owner}/{repo}/pulls/{pr}/comments?per_page=100" \
      --jq '.[] | select(.pull_request_review_id == {review_id} and .user.login == "Copilot" and .in_reply_to_id == null) | {id, body, path, line, diff_hunk}'
    ```
 
-5. **Also fetch Copilot issue comments.** Copilot may respond to `@copilot`
-   mentions as issue comments rather than review comments. Scan both:
+4. **Fetch Copilot issue comments** (always — Copilot may respond via issue
+   comments even when no review object exists):
 
    ```bash
    gh api "/repos/{owner}/{repo}/issues/{pr}/comments?per_page=100" \
      --jq '.[] | select(.user.login == "Copilot" and .in_reply_to_id == null) | {id, body, created_at}'
    ```
 
-   Merge with the review-comment list from step 4. Review comments carry
-   `path` and `line` context and take priority during evaluation. When an
-   issue comment references a file path in its body, extract that context
-   for the EVALUATE phase. Cross-reference both sources with
-   `handledComments`.
+5. **Merge both comment sources.** Review comments carry `path` and `line`
+   context and take priority during evaluation. When an issue comment
+   references a file path in its body, extract that context for EVALUATE.
+   Cross-reference both sources with `handledComments` — skip
+   already-handled IDs. Copy new comments to a working list.
 
-6. **Cross-reference with `handledComments`** — skip already-handled IDs.
-   Copy any new comments to a working list for EVALUATE.
-
-7. **If no unhandled comments found in any new review:**
-   update `lastReviewId` to the latest review ID, increment
-   `consecutiveNoAction`, do smart exit check, wait and re-enter COLLECT.
-
-8. **If unhandled comments exist:** save them to a working list, update
+6. **If unhandled comments exist:** save them to a working list, update
    `lastReviewId` to the latest review ID, transition to EVALUATE.
+
+7. **If no unhandled comments and `round == 0`:**
+   No Copilot review has been triggered yet. Transition to RE_REQUEST to
+   post the initial `@copilot review this PR` comment.
+
+8. **If no unhandled comments and `round > 0`:**
+   - Increment `consecutiveNoAction` in state.
+   - **Smart exit check:** If `consecutiveNoAction >= 2`, transition to DONE.
+   - Otherwise: wait 30 seconds, then re-enter COLLECT (go to step 0).
 
 ### State: EVALUATE
 
@@ -325,7 +322,7 @@ When any trigger fires, write the exit reason to state and transition to DONE.
 Read the state file and print a summary:
 
 ```bash
-cat ~/.claude/copilot-review/${owner}-${repo}-${prNumber}.json | jq '{
+cat .claude/copilot-review/${owner}-${repo}-${prNumber}.json | jq '{
   pr: "#\(.prNumber)",
   state: .currentState,
   round: .round,

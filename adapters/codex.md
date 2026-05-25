@@ -15,5 +15,5 @@ Load and follow that file. This adapter maps Codex tool names.
 
 ## Codex-Specific Notes
 
-- State file operations at `~/.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
+- State file operations at `.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
 - Codex uses `RunShellScript` for all shell commands including `gh`.

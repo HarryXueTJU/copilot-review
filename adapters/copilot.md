@@ -16,4 +16,4 @@ Load and follow that file. This adapter maps Copilot CLI tool names.
 ## Copilot CLI-Specific Notes
 
 - Use `shell` for all `gh` commands.
-- State file operations use `read`/`write` on `~/.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
+- State file operations use `read`/`write` on `.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
