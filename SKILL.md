@@ -233,8 +233,8 @@ ordered to avoid conflicts):
    like "review commit X" risks scoping Copilot to a partial diff. `@copilot`'s
    default behavior is to review all changes on the PR.
 
-   Note: This creates an issue comment, not a review comment. The COLLECT state
-   scans both sources (see COLLECT state updates).
+   The `@copilot` mention triggers Copilot to review the PR and post feedback
+   as review comments or issue comments. COLLECT scans both sources.
 
 3. **Update state:** increment round, save round summary, clear `ciFixFiles`,
    reset `ciAttempts` to 0, reset `lastReviewId` to null, reset
