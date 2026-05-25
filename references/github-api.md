@@ -98,15 +98,16 @@ mutation($threadId: ID!) {
 
 ## Request Copilot Review (Re-request)
 
-Assign Copilot to the PR and trigger a re-review:
+Trigger Copilot to review the PR:
 
 ```bash
-# Assign Copilot (makes it visible in PR sidebar)
-gh pr edit {pr} --repo {owner}/{repo} --add-assignee "@copilot"
-
-# Trigger review via @copilot mention (no qualifiers — reviews full PR)
-gh pr comment {pr} --repo {owner}/{repo} --body "@copilot"
+# Trigger review via @copilot mention
+gh pr comment {pr} --repo {owner}/{repo} --body "@copilot review this PR"
 ```
+
+The phrasing `@copilot review this PR` triggers a full PR re-review without
+scoping to a specific commit. Bare `@copilot` causes Copilot to ask for
+clarification.
 
 ## Check for Merge Conflicts
 
