@@ -13,6 +13,24 @@ use `gh` CLI.
 Read `references/github-api.md` for exact `gh` command recipes.
 Read `references/evaluation-prompt.md` for comment evaluation instructions.
 
+## Installation
+
+The skill is loaded via symlinks from the Claude Code skills directory to
+this repository. After cloning:
+
+```bash
+# Replace <repo> with the path to this repository
+ln -sf <repo>/SKILL.md ~/.claude/skills/copilot-review/SKILL.md
+ln -sf <repo>/references ~/.claude/skills/copilot-review/references
+```
+
+Verify: `ls ~/.claude/skills/copilot-review/` should show `SKILL.md` and
+`references/` pointing into the repo. No absolute paths are baked into the
+skill — it works from any clone location.
+
+For non-Claude-Code platforms (Copilot CLI, Codex, Gemini), symlink to the
+respective adapter in `adapters/` instead of `SKILL.md`.
+
 ## Prerequisites
 
 These must be available and working before starting:
