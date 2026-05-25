@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "Bash": {
+      "allow": [
+        "gh *",
+        "git *",
+        "pnpm *",
+        "npm *",
+        "yarn *",
+        "jq *"
+      ]
+    },
+    "Edit": {
+      "ask": true
+    },
+    "Write": {
+      "ask": true
+    }
+  }
+}
