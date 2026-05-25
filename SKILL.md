@@ -97,11 +97,14 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
    merge, main evolves). Ensure the PR is mergeable before Copilot reviews it.
 
    ```bash
-   gh pr view {pr} --repo {owner}/{repo} --json mergeable --jq '.mergeable'
+   gh pr view {pr} --repo {owner}/{repo} --json mergeable,baseRefName \
+     --jq '{mergeable, base: .baseRefName}'
    ```
 
    If `mergeable` is `"CONFLICTING"`:
-   - `git fetch origin {base}` (where `{base}` is the PR's base branch)
+   - Resolve `{base}` from the command output above.
+   - `git stash` (if there are uncommitted changes from an interrupted IMPLEMENT)
+   - `git fetch origin {base}`
    - `git merge origin/{base}` — this produces conflict markers in affected files
    - Read each conflicted file. When two branches independently add different
      blocks (non-overlapping), keep both. When the same lines differ, prefer
@@ -114,10 +117,12 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
    - If `conflictAttempts >= 3`: report unresolvable conflict to user and
      pause the loop (transition to DONE with exit reason
      `"unresolvable conflict"`).
-   - Re-check `mergeable`. If still `"CONFLICTING"`, loop back to the merge step.
+   - Wait 15 seconds for GitHub to re-evaluate mergeability, then re-check
+     `mergeable`. If still `"CONFLICTING"`, loop back to the merge step.
 
    If `mergeable` is `null` or `"UNKNOWN"`: the merge check hasn't completed
-   yet. Wait 10 seconds and re-check, up to 5 times.
+   yet. Wait 10 seconds and re-check, up to 5 times. If still unresolved after
+   5 attempts, transition to DONE with exit reason `"merge check timeout"`.
 
    Once `mergeable` is `"MERGEABLE"`, reset `conflictAttempts` to 0 and proceed.
 
