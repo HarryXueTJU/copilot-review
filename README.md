@@ -20,7 +20,7 @@ ln -sf "$(pwd)/SKILL.md" ~/.claude/skills/copilot-review/SKILL.md
 ln -sf "$(pwd)/references" ~/.claude/skills/copilot-review/references
 ```
 
-### Copilot CLI
+### GitHub Copilot (VS Code)
 
 ```bash
 git clone <this-repo>
@@ -29,6 +29,23 @@ mkdir -p <copilot-skills-dir>/copilot-review
 ln -sf "$(pwd)/adapters/copilot.md" <copilot-skills-dir>/copilot-review/SKILL.md
 ln -sf "$(pwd)/references" <copilot-skills-dir>/copilot-review/references
 ```
+
+If your Copilot setup does not provide a custom skills directory, keep
+`adapters/copilot.md` in this repo and copy its tool mapping into your
+user prompt/instructions file.
+
+### GitHub Copilot CLI
+
+```bash
+git clone <this-repo>
+cd copilot-review
+mkdir -p <copilot-cli-skills-dir>/copilot-review
+ln -sf "$(pwd)/adapters/copilot-cli.md" <copilot-cli-skills-dir>/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" <copilot-cli-skills-dir>/copilot-review/references
+```
+
+If your Copilot CLI setup does not provide a persistent skills directory,
+copy the adapter mapping into `.github/copilot-instructions.md`.
 
 ### Codex
 
@@ -172,7 +189,8 @@ The loop stops automatically when:
 | Platform | Adapter |
 |----------|---------|
 | Claude Code | `SKILL.md` (canonical) |
-| Copilot CLI | `adapters/copilot.md` |
+| GitHub Copilot (VS Code) | `adapters/copilot.md` |
+| GitHub Copilot CLI | `adapters/copilot-cli.md` |
 | Codex | `adapters/codex.md` |
 
 Tool mappings for each platform are documented in the **Platform Tool Mapping**
@@ -184,7 +202,8 @@ section at the end of `SKILL.md`.
 SKILL.md                         Canonical skill definition
 adapters/
   claude.md                      Claude Code adapter
-  copilot.md                     Copilot CLI adapter
+  copilot.md                     GitHub Copilot adapter
+  copilot-cli.md                 GitHub Copilot CLI adapter
   codex.md                       Codex adapter
 references/
   github-api.md                  gh command recipes

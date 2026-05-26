@@ -21,11 +21,12 @@ Clone this repository and symlink `SKILL.md` (or the platform adapter in
 | Agent | Skills directory | Link target |
 |-------|-----------------|-------------|
 | Claude Code | `~/.claude/skills/copilot-review/` | `SKILL.md` |
-| Copilot CLI | `<copilot-skills-dir>/copilot-review/` | `adapters/copilot.md` |
+| GitHub Copilot (VS Code) | `<copilot-skills-dir>/copilot-review/` | `adapters/copilot.md` |
+| GitHub Copilot CLI | `<copilot-cli-skills-dir>/copilot-review/` | `adapters/copilot-cli.md` |
 | Codex | `<codex-skills-dir>/copilot-review/` | `adapters/codex.md` |
 | Other agents | `<agent-skills-dir>/copilot-review/` | `SKILL.md` |
 
-For Copilot CLI and Codex, check your agent's documentation for the exact
+For GitHub Copilot, GitHub Copilot CLI, and Codex, check your agent's documentation for the exact
 skills directory path. Also symlink `references/` into the same directory.
 See `README.md` for step-by-step commands.
 
@@ -444,15 +445,33 @@ but the canonical skill content above is shared.
 - **Merge conflicts:** Resolve with `Bash` running `git` commands, and `Edit` for conflict markers.
 - **Session persistence:** If session ends mid-loop, state file allows resuming with `Skill("copilot-review", "resume")`.
 
-### Copilot CLI
+### GitHub Copilot (VS Code)
 
-| Skill Reference | Copilot CLI Tool |
-|----------------|-----------------|
-| `bash` / `gh` | `bash` |
-| `read file` | `view` |
-| `edit file` | `edit` |
-| `write file` | `create` |
-| `spawn subagent` | `task` with `agent_type: "general-purpose"` or `"explore"` |
+| Skill Reference | GitHub Copilot Tool (VS Code) |
+|----------------|--------------------------------|
+| `bash` / `gh` | `run_in_terminal` |
+| `read file` | `read_file` |
+| `edit file` | `apply_patch` |
+| `write file` | `create_file` |
+| `spawn subagent` | `runSubagent` (`agentName: "Explore"` for read-only exploration) |
+
+- **State file:** Read/write at `.copilot-review/<owner>-<repo>-<prNumber>.json`.
+- **Parallel evaluation:** Use `multi_tool_use.parallel` with multiple `runSubagent` calls.
+- **GitHub commands:** Use `run_in_terminal` for all `gh` invocations.
+
+### GitHub Copilot CLI
+
+| Skill Reference | GitHub Copilot CLI Capability |
+|----------------|-------------------------------|
+| `bash` / `gh` | `shell` tool (`--allow-tool='shell(gh:*)'` and `--allow-tool='shell(git:*)'`) |
+| `read file` | Built-in read-only file tools |
+| `edit file` | `write` tools (`--allow-tool=write`) |
+| `write file` | `write` tools (`--allow-tool=write`) |
+| `spawn subagent` | `/fleet` and `/tasks` |
+
+- **CLI binary:** Use `copilot` (not `gh copilot`).
+- **Permissions:** Prefer granular permissions over `--allow-all`.
+- **State file:** Read/write at `.copilot-review/<owner>-<repo>-<prNumber>.json`.
 
 ### Codex
 

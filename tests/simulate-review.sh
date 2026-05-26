@@ -39,7 +39,7 @@ echo "OK: PR node ID: $NODE_ID"
 
 echo ""
 echo "=== Test 7: State file read/write ==="
-STATE_DIR="$HOME/.claude/copilot-review"
+STATE_DIR=".copilot-review"
 mkdir -p "$STATE_DIR"
 STATE_FILE="${STATE_DIR}/${OWNER}-${REPO}-${PR}.json"
 echo '{"test": true}' > "$STATE_FILE"

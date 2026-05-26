@@ -1,25 +1,32 @@
-# Copilot Review — Copilot CLI Adapter
+# Copilot Review — GitHub Copilot Adapter
 
 The canonical skill lives at the plugin root `SKILL.md`.
-Load and follow that file. This adapter maps Copilot CLI tool names.
+Load and follow that file. This adapter maps tool references to
+GitHub Copilot in VS Code (agent mode).
 
 ## Tool Mapping
 
-| Skill Reference | Copilot CLI Tool |
-|----------------|-----------------|
-| `bash` / `gh` | `bash` |
-| `read file` | `view` |
-| `edit file` | `edit` |
-| `write file` | `create` |
-| `spawn subagent` | `task` with `agent_type: "general-purpose"` or `"explore"` |
-| parallel subagents | multiple `task` calls |
-| subagent output | `read_agent`, `list_agents` |
-| file search | `grep`, `glob` |
-| task tracking | `sql` with built-in `todos` table |
-| web fetch | `web_fetch` |
+| Skill Reference | GitHub Copilot Tool (VS Code) |
+|----------------|--------------------------------|
+| `bash` / `gh` | `run_in_terminal` |
+| `read file` | `read_file` |
+| `edit file` | `apply_patch` |
+| `write file` | `create_file` |
+| `spawn subagent` | `runSubagent` (`agentName: "Explore"` for read-only exploration) |
+| parallel subagents | `multi_tool_use.parallel` with multiple `runSubagent` calls |
+| file search | `grep_search`, `file_search`, `semantic_search` |
+| task tracking | `manage_todo_list` |
+| web fetch | `fetch_webpage` |
 
-## Copilot CLI-Specific Notes
+## Copilot-Specific Notes
 
-- Use `bash` for all `gh` commands.
-- State file: use `view`/`create` on `.copilot-review/<owner>-<repo>-<prNumber>.json`.
-- No `EnterPlanMode` equivalent — stay in the main session.
+- Use `run_in_terminal` for all `gh` commands.
+- State file path is workspace-local:
+	`.copilot-review/<owner>-<repo>-<prNumber>.json`.
+- For state updates, read with `read_file` and write changes with `apply_patch`
+	(or `create_file` if missing).
+- Prefer `multi_tool_use.parallel` for independent read-only checks
+	(review/comment fetches, search, and context reads).
+- If your Copilot environment does not expose custom skill directories,
+	keep this adapter as project documentation and copy its mapping into your
+	user prompt/instructions file.
