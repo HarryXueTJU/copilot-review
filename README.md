@@ -6,22 +6,51 @@ re-requests review, and exits when there's nothing left to fix.
 
 ## Installation
 
+The skill is installed by creating symlinks from your agent's skills
+directory to this repository. The setup is the same for all agents — only
+the target directory differs.
+
+### Claude Code
+
 ```bash
 git clone <this-repo>
 cd copilot-review
+mkdir -p ~/.claude/skills/copilot-review
 ln -sf "$(pwd)/SKILL.md" ~/.claude/skills/copilot-review/SKILL.md
 ln -sf "$(pwd)/references" ~/.claude/skills/copilot-review/references
 ```
 
-Verify:
+### Copilot CLI
 
 ```bash
-ls ~/.claude/skills/copilot-review/
-# Should show: SKILL.md  references/
+git clone <this-repo>
+cd copilot-review
+mkdir -p ~/.copilot/skills/copilot-review
+ln -sf "$(pwd)/adapters/copilot.md" ~/.copilot/skills/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" ~/.copilot/skills/copilot-review/references
 ```
 
-For **Copilot CLI / Codex / Gemini CLI**, symlink to the respective adapter
-in `adapters/` instead of `SKILL.md` directly.
+### Codex
+
+```bash
+git clone <this-repo>
+cd copilot-review
+mkdir -p ~/.codex/skills/copilot-review
+ln -sf "$(pwd)/adapters/codex.md" ~/.codex/skills/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" ~/.codex/skills/copilot-review/references
+```
+
+### Gemini CLI
+
+```bash
+git clone <this-repo>
+cd copilot-review
+mkdir -p ~/.gemini/skills/copilot-review
+ln -sf "$(pwd)/adapters/gemini.md" ~/.gemini/skills/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" ~/.gemini/skills/copilot-review/references
+```
+
+### After installation
 
 Add `.copilot-review/` to each project's `.gitignore` to avoid committing
 state files:

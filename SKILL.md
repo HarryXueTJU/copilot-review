@@ -15,21 +15,18 @@ Read `references/evaluation-prompt.md` for comment evaluation instructions.
 
 ## Installation
 
-The skill is loaded via symlinks from the Claude Code skills directory to
-this repository. After cloning:
+Clone this repository and symlink `SKILL.md` (or the platform adapter in
+`adapters/`) into your agent's skills directory:
 
-```bash
-# Replace <repo> with the path to this repository
-ln -sf <repo>/SKILL.md ~/.claude/skills/copilot-review/SKILL.md
-ln -sf <repo>/references ~/.claude/skills/copilot-review/references
-```
+| Agent | Skills directory | Link target |
+|-------|-----------------|-------------|
+| Claude Code | `~/.claude/skills/copilot-review/` | `SKILL.md` |
+| Copilot CLI | `~/.copilot/skills/copilot-review/` | `adapters/copilot.md` |
+| Codex | `~/.codex/skills/copilot-review/` | `adapters/codex.md` |
+| Gemini CLI | `~/.gemini/skills/copilot-review/` | `adapters/gemini.md` |
 
-Verify: `ls ~/.claude/skills/copilot-review/` should show `SKILL.md` and
-`references/` pointing into the repo. No absolute paths are baked into the
-skill — it works from any clone location.
-
-For non-Claude-Code platforms (Copilot CLI, Codex, Gemini), symlink to the
-respective adapter in `adapters/` instead of `SKILL.md`.
+Also symlink `references/` into the same directory. See `README.md` for
+step-by-step commands for each agent.
 
 ## Prerequisites
 
