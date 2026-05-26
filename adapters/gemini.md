@@ -15,5 +15,5 @@ Load and follow that file. This adapter maps Gemini CLI tool names.
 
 ## Gemini-Specific Notes
 
-- State file operations at `.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
+- State file operations at `.copilot-review/<owner>-<repo>-<prNumber>.json`.
 - Use `run_shell_command` for all `gh` commands.

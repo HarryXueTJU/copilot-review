@@ -115,7 +115,7 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
 - **DONE** — Smart exit: Copilot has no new comments for 2 consecutive rounds,
   or only minor comments remain after round 3.
 
-Progress is saved in `.claude/copilot-review/<owner>-<repo>-<pr>.json` so the
+Progress is saved in `.copilot-review/<owner>-<repo>-<pr>.json` so the
 loop can resume across sessions.
 
 ## Smart Exit
@@ -151,5 +151,5 @@ adapters/
 references/
   github-api.md                  gh command recipes
   evaluation-prompt.md           Comment evaluation prompt template
-.claude/copilot-review/          State files (one per PR, gitignored)
+.copilot-review/          State files (one per PR, gitignored)
 ```

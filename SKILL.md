@@ -7,7 +7,7 @@ argument-hint: "<pr-number> | status | resume | stop"
 # /copilot-review — Automated Copilot PR Review Loop
 
 State-machine-driven skill. One state file per PR at
-`.claude/copilot-review/<owner>-<repo>-<prNumber>.json`. All GitHub operations
+`.copilot-review/<owner>-<repo>-<prNumber>.json`. All GitHub operations
 use `gh` CLI.
 
 Read `references/github-api.md` for exact `gh` command recipes.
@@ -86,7 +86,7 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
    Otherwise prompt the user for the PR number.
 
 2. **Load or create state file.**
-   Path: `.claude/copilot-review/${owner}-${repo}-${prNumber}.json`
+   Path: `.copilot-review/${owner}-${repo}-${prNumber}.json`
    If it exists, read it. If not, create with:
    ```json
    {
@@ -388,7 +388,7 @@ When any trigger fires, write the exit reason to state and transition to DONE.
 Read the state file and print a summary:
 
 ```bash
-cat .claude/copilot-review/${owner}-${repo}-${prNumber}.json | jq '{
+cat .copilot-review/${owner}-${repo}-${prNumber}.json | jq '{
   pr: "#\(.prNumber)",
   state: .currentState,
   round: .round,
@@ -440,7 +440,7 @@ but the canonical skill content above is shared.
 | `write file` | `Write` |
 | `spawn subagent` | `Agent` with `subagent_type: "general-purpose"` |
 
-- **State file:** Read/write via `Read`/`Write` tools at `.claude/copilot-review/<owner>-<repo>-<prNumber>.json`.
+- **State file:** Read/write via `Read`/`Write` tools at `.copilot-review/<owner>-<repo>-<prNumber>.json`.
 - **Parallel evaluation:** Use `Agent` with `subagent_type: "general-purpose"` for independent comment evaluation.
 - **File editing:** Use `Edit` with exact `old_string` / `new_string`. Always `Read` the file first.
 - **Merge conflicts:** Resolve with `Bash` running `git` commands, and `Edit` for conflict markers.
