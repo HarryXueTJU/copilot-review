@@ -447,21 +447,21 @@ but the canonical skill content above is shared.
 
 | Skill Reference | Copilot CLI Tool |
 |----------------|-----------------|
-| `bash` / `gh` | `shell` |
-| `read file` | `read_file` |
-| `edit file` | `edit_file` |
-| `write file` | `write_file` |
-| `spawn subagent` | `task` with `type: "local"` |
+| `bash` / `gh` | `bash` |
+| `read file` | `view` |
+| `edit file` | `edit` |
+| `write file` | `create` |
+| `spawn subagent` | `task` with `agent_type: "general-purpose"` or `"explore"` |
 
 ### Codex
 
 | Skill Reference | Codex Tool |
 |----------------|-----------|
-| `bash` / `gh` | `RunShellScript` |
-| `read file` | `ReadFile` |
-| `edit file` | `ApplyEdits` |
-| `write file` | `WriteFile` |
-| `spawn subagent` | `Agent` |
+| `bash` / `gh` | Native shell tools |
+| `read file` | Native file tools |
+| `edit file` | Native file tools |
+| `write file` | Native file tools |
+| `spawn subagent` | `spawn_agent` |
 
 ### Gemini CLI
 
@@ -469,6 +469,6 @@ but the canonical skill content above is shared.
 |----------------|----------------|
 | `bash` / `gh` | `run_shell_command` |
 | `read file` | `read_file` |
-| `edit file` | `replace_in_file` |
+| `edit file` | `replace` |
 | `write file` | `write_file` |
-| `spawn subagent` | `dispatch_agent` |
+| `spawn subagent` | `@generalist` with inline prompt |
