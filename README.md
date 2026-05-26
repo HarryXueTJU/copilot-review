@@ -23,6 +23,13 @@ ls ~/.claude/skills/copilot-review/
 For **Copilot CLI / Codex / Gemini CLI**, symlink to the respective adapter
 in `adapters/` instead of `SKILL.md` directly.
 
+Add `.copilot-review/` to each project's `.gitignore` to avoid committing
+state files:
+
+```bash
+echo '.copilot-review/' >> .gitignore
+```
+
 ## Prerequisites
 
 ### This Skill
