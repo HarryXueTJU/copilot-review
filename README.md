@@ -8,8 +8,9 @@ re-requests review, and exits when there's nothing left to fix.
 
 ```bash
 git clone <this-repo>
-ln -sf "$(pwd)/copilot-review/SKILL.md" ~/.claude/skills/copilot-review/SKILL.md
-ln -sf "$(pwd)/copilot-review/references" ~/.claude/skills/copilot-review/references
+cd copilot-review
+ln -sf "$(pwd)/SKILL.md" ~/.claude/skills/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" ~/.claude/skills/copilot-review/references
 ```
 
 Verify:
@@ -24,6 +25,8 @@ in `adapters/` instead of `SKILL.md` directly.
 
 ## Prerequisites
 
+### This Skill
+
 | Tool | Check | Purpose |
 |------|-------|---------|
 | `gh` CLI | `gh auth status` | GitHub API (reviews, comments, CI) |
@@ -31,6 +34,58 @@ in `adapters/` instead of `SKILL.md` directly.
 | `jq` | `jq --version` | Parsing JSON responses |
 
 **`gh` scopes needed:** `repo`, `read:org`, `workflow`.
+
+### GitHub Copilot Code Review
+
+The PR must be in a repository where **Copilot code review** is available.
+This feature requires a paid Copilot plan:
+
+| Plan | Code review available? |
+|------|----------------------|
+| Copilot Free | No |
+| Copilot Pro | Yes |
+| Copilot Pro+ | Yes |
+| Copilot Business | Yes — also available to org members **without** a license, if enabled by an admin |
+| Copilot Enterprise | Yes — also available to org members **without** a license, if enabled by an admin |
+
+For **Business / Enterprise** orgs, an admin must also enable the
+**Copilot code review** policy. Without this, Copilot won't appear in the
+reviewer picker and the GraphQL re-request will silently do nothing.
+
+Key behaviors to know:
+
+- Copilot always leaves a **"Comment"** review — never "Approve" or "Request
+  changes". Its reviews do not count toward required approvals.
+- Copilot does **not** auto-re-review when you push new commits. You must
+  explicitly re-request it (the skill does this automatically).
+- Copilot **may repeat** the same comments on re-review, even if they were
+  previously resolved or downvoted.
+- Copilot does **not reply** to replies on its review threads.
+
+## Troubleshooting
+
+**Copilot doesn't respond to review requests:**
+
+- Your account must have a Copilot Pro, Pro+, Business, or Enterprise
+  subscription. Free accounts cannot use code review.
+- If you're on a Business/Enterprise plan without a personal license, an
+  admin must enable "Allow members without a Copilot license to use Copilot
+  code review" in the org's Copilot policies.
+- The org must have the **Copilot code review** policy enabled.
+- Copilot only reviews pull requests, not individual commits or branches.
+
+**Re-request returns immediately with no new comments:**
+
+- This is normal. Copilot may have nothing new to say after reviewing the
+  latest changes. The skill treats this as a positive signal and exits after
+  two consecutive rounds with no new feedback.
+
+**`requestReviewsByLogin` GraphQL mutation fails:**
+
+- Copilot is a Bot type, not a User. The mutation must use `botLogins`:
+  `["copilot-pull-request-reviewer[bot]"]`.
+- If the mutation fails, the skill falls back to posting `@copilot review
+  this PR` as a PR comment.
 
 ## Usage
 
