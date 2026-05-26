@@ -25,9 +25,9 @@ ln -sf "$(pwd)/references" ~/.claude/skills/copilot-review/references
 ```bash
 git clone <this-repo>
 cd copilot-review
-mkdir -p ~/.copilot/skills/copilot-review
-ln -sf "$(pwd)/adapters/copilot.md" ~/.copilot/skills/copilot-review/SKILL.md
-ln -sf "$(pwd)/references" ~/.copilot/skills/copilot-review/references
+mkdir -p <copilot-skills-dir>/copilot-review
+ln -sf "$(pwd)/adapters/copilot.md" <copilot-skills-dir>/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" <copilot-skills-dir>/copilot-review/references
 ```
 
 ### Codex
@@ -35,19 +35,23 @@ ln -sf "$(pwd)/references" ~/.copilot/skills/copilot-review/references
 ```bash
 git clone <this-repo>
 cd copilot-review
-mkdir -p ~/.codex/skills/copilot-review
-ln -sf "$(pwd)/adapters/codex.md" ~/.codex/skills/copilot-review/SKILL.md
-ln -sf "$(pwd)/references" ~/.codex/skills/copilot-review/references
+mkdir -p <codex-skills-dir>/copilot-review
+ln -sf "$(pwd)/adapters/codex.md" <codex-skills-dir>/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" <codex-skills-dir>/copilot-review/references
 ```
 
-### Gemini CLI
+### Other Agents
+
+For any agent that supports custom skills, symlink `SKILL.md` and
+`references/` into its skills directory. If the agent needs platform-specific
+tool names, create an adapter following the pattern in `adapters/`.
 
 ```bash
 git clone <this-repo>
 cd copilot-review
-mkdir -p ~/.gemini/skills/copilot-review
-ln -sf "$(pwd)/adapters/gemini.md" ~/.gemini/skills/copilot-review/SKILL.md
-ln -sf "$(pwd)/references" ~/.gemini/skills/copilot-review/references
+mkdir -p <agent-skills-dir>/copilot-review
+ln -sf "$(pwd)/SKILL.md" <agent-skills-dir>/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" <agent-skills-dir>/copilot-review/references
 ```
 
 ### After installation
@@ -170,7 +174,6 @@ The loop stops automatically when:
 | Claude Code | `SKILL.md` (canonical) |
 | Copilot CLI | `adapters/copilot.md` |
 | Codex | `adapters/codex.md` |
-| Gemini CLI | `adapters/gemini.md` |
 
 Tool mappings for each platform are documented in the **Platform Tool Mapping**
 section at the end of `SKILL.md`.
@@ -183,7 +186,6 @@ adapters/
   claude.md                      Claude Code adapter
   copilot.md                     Copilot CLI adapter
   codex.md                       Codex adapter
-  gemini.md                      Gemini CLI adapter
 references/
   github-api.md                  gh command recipes
   evaluation-prompt.md           Comment evaluation prompt template

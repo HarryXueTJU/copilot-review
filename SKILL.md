@@ -21,12 +21,13 @@ Clone this repository and symlink `SKILL.md` (or the platform adapter in
 | Agent | Skills directory | Link target |
 |-------|-----------------|-------------|
 | Claude Code | `~/.claude/skills/copilot-review/` | `SKILL.md` |
-| Copilot CLI | `~/.copilot/skills/copilot-review/` | `adapters/copilot.md` |
-| Codex | `~/.codex/skills/copilot-review/` | `adapters/codex.md` |
-| Gemini CLI | `~/.gemini/skills/copilot-review/` | `adapters/gemini.md` |
+| Copilot CLI | `<copilot-skills-dir>/copilot-review/` | `adapters/copilot.md` |
+| Codex | `<codex-skills-dir>/copilot-review/` | `adapters/codex.md` |
+| Other agents | `<agent-skills-dir>/copilot-review/` | `SKILL.md` |
 
-Also symlink `references/` into the same directory. See `README.md` for
-step-by-step commands for each agent.
+For Copilot CLI and Codex, check your agent's documentation for the exact
+skills directory path. Also symlink `references/` into the same directory.
+See `README.md` for step-by-step commands.
 
 ## Prerequisites
 
@@ -463,12 +464,3 @@ but the canonical skill content above is shared.
 | `write file` | Native file tools |
 | `spawn subagent` | `spawn_agent` |
 
-### Gemini CLI
-
-| Skill Reference | Gemini CLI Tool |
-|----------------|----------------|
-| `bash` / `gh` | `run_shell_command` |
-| `read file` | `read_file` |
-| `edit file` | `replace` |
-| `write file` | `write_file` |
-| `spawn subagent` | `@generalist` with inline prompt |
