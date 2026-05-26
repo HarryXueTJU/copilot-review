@@ -196,6 +196,26 @@ The loop stops automatically when:
 Tool mappings for each platform are documented in the **Platform Tool Mapping**
 section at the end of `SKILL.md`.
 
+## Multi-Agent Validation
+
+This repository includes a shared compatibility contract and smoke skeleton so
+adapter changes can be validated consistently across agents.
+
+- Compatibility spec:
+  `references/multi-agent-compatibility.md`
+- Validation plan:
+  `references/multi-agent-validation-plan.md`
+- Smoke skeleton:
+  `tests/simulate-review-multi-agent.sh`
+
+Run the smoke skeleton:
+
+```bash
+./tests/simulate-review-multi-agent.sh <agent> <pr-number>
+```
+
+Supported agent values: `claude`, `copilot-vscode`, `copilot-cli`, `codex`.
+
 ## File Structure
 
 ```
