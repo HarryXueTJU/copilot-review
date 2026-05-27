@@ -52,10 +52,16 @@ copy the adapter mapping into `.github/copilot-instructions.md`.
 ```bash
 git clone <this-repo>
 cd copilot-review
-mkdir -p <codex-skills-dir>/copilot-review
-ln -sf "$(pwd)/adapters/codex.md" <codex-skills-dir>/copilot-review/SKILL.md
-ln -sf "$(pwd)/references" <codex-skills-dir>/copilot-review/references
+mkdir -p ~/.agents/skills/copilot-review
+mkdir -p ~/.agents/skills/copilot-review/adapters
+ln -sf "$(pwd)/SKILL.md" ~/.agents/skills/copilot-review/SKILL.md
+ln -sf "$(pwd)/references" ~/.agents/skills/copilot-review/references
+ln -sf "$(pwd)/adapters/codex.md" ~/.agents/skills/copilot-review/adapters/codex.md
 ```
+
+The Codex adapter is a supporting note, not a replacement for the canonical
+skill. If your Codex build documents a different skills directory, use that
+directory but still install the root `SKILL.md` as `SKILL.md`.
 
 ### Other Agents
 
@@ -191,7 +197,7 @@ The loop stops automatically when:
 | Claude Code | `SKILL.md` (canonical) |
 | GitHub Copilot (VS Code) | `adapters/copilot.md` |
 | GitHub Copilot CLI | `adapters/copilot-cli.md` |
-| Codex | `adapters/codex.md` |
+| Codex | `SKILL.md` plus `adapters/codex.md` notes |
 
 Tool mappings for each platform are documented in the **Platform Tool Mapping**
 section at the end of `SKILL.md`.
@@ -216,6 +222,12 @@ Run the smoke skeleton:
 
 Supported agent values: `claude`, `copilot-vscode`, `copilot-cli`, `codex`.
 
+For Codex packaging changes that should not touch GitHub, run:
+
+```bash
+bash tests/validate-codex-compat.sh
+```
+
 ## File Structure
 
 ```
@@ -228,5 +240,7 @@ adapters/
 references/
   github-api.md                  gh command recipes
   evaluation-prompt.md           Comment evaluation prompt template
+tests/
+  validate-codex-compat.sh       Local Codex packaging checks
 .copilot-review/          State files (one per PR, gitignored)
 ```

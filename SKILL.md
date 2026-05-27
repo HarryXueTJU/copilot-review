@@ -1,6 +1,6 @@
 ---
 name: copilot-review
-description: Automate the GitHub Copilot PR review feedback loop — collect reviews, evaluate comments, implement accepted changes, handle CI, re-request review, exit smartly.
+description: Use when automating GitHub Copilot PR code review feedback loops for a pull request, including status, resume, and stop requests.
 argument-hint: "<pr-number> | status | resume | stop"
 ---
 
@@ -15,19 +15,22 @@ Read `references/evaluation-prompt.md` for comment evaluation instructions.
 
 ## Installation
 
-Clone this repository and symlink `SKILL.md` (or the platform adapter in
-`adapters/`) into your agent's skills directory:
+Clone this repository and symlink the appropriate `SKILL.md` into your agent's
+skills directory. For Codex, install the canonical root `SKILL.md`; keep
+`adapters/codex.md` as supporting notes rather than replacing the main skill.
 
-| Agent | Skills directory | Link target |
-|-------|-----------------|-------------|
-| Claude Code | `~/.claude/skills/copilot-review/` | `SKILL.md` |
-| GitHub Copilot (VS Code) | `<copilot-skills-dir>/copilot-review/` | `adapters/copilot.md` |
-| GitHub Copilot CLI | `<copilot-cli-skills-dir>/copilot-review/` | `adapters/copilot-cli.md` |
-| Codex | `<codex-skills-dir>/copilot-review/` | `adapters/codex.md` |
-| Other agents | `<agent-skills-dir>/copilot-review/` | `SKILL.md` |
+| Agent | Skills directory | Installed `SKILL.md` | Extra files |
+|-------|-----------------|----------------------|-------------|
+| Claude Code | `~/.claude/skills/copilot-review/` | `SKILL.md` | `references/` |
+| GitHub Copilot (VS Code) | `<copilot-skills-dir>/copilot-review/` | `adapters/copilot.md` | `references/` |
+| GitHub Copilot CLI | `<copilot-cli-skills-dir>/copilot-review/` | `adapters/copilot-cli.md` | `references/` |
+| Codex | `~/.agents/skills/copilot-review/` | `SKILL.md` | `references/`, `adapters/codex.md` |
+| Other agents | `<agent-skills-dir>/copilot-review/` | `SKILL.md` | `references/` |
 
 For GitHub Copilot, GitHub Copilot CLI, and Codex, check your agent's documentation for the exact
 skills directory path. Also symlink `references/` into the same directory.
+For Codex, symlink `adapters/codex.md` beside the installed root `SKILL.md`;
+the installed `SKILL.md` must be the canonical root file.
 See `README.md` for step-by-step commands.
 
 ## Prerequisites
@@ -182,13 +185,13 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
    post the initial `@copilot review this PR` comment.
 
 8. **If no unhandled comments and `round > 0`:**
-   - Increment `consecutiveNoAction` in state.
-   - **Smart exit check:** If `consecutiveNoAction >= 2`, transition to DONE.
+   - Increment `smartExit.consecutiveNoAction` in state.
+   - **Smart exit check:** If `smartExit.consecutiveNoAction >= 2`, transition to DONE.
    - Otherwise: poll for new Copilot feedback every 30 seconds, up to 20
      times (10 minutes total). On each poll, re-fetch reviews and comments
      (steps 1-5). If Copilot responds within the window, process normally.
      If all 20 polls pass with no response, record the timeout and
-     increment `consecutiveNoAction`, then do the smart exit check.
+     increment `smartExit.consecutiveNoAction`, then do the smart exit check.
 
 ### State: EVALUATE
 
@@ -210,7 +213,7 @@ For each unhandled comment, evaluate independently:
 4. **After all evaluations:**
    - If any accepted → transition to IMPLEMENT
    - If all rejected → record round summary in state, increment
-     `consecutiveNoAction`, transition to COLLECT
+     `smartExit.consecutiveNoAction`, transition to COLLECT
 
 ### State: IMPLEMENT
 
@@ -276,7 +279,7 @@ ordered to avoid conflicts):
 3. **If any check is failing** (max 3 fix attempts):
    - Get the failing workflow run ID:
      ```bash
-     gh pr checks {pr} --json name,state,detailsUrl --jq '.[] | select(.state == "FAILURE")'
+     gh pr checks {pr} --json name,state,link --jq '.[] | select(.state == "FAILURE")'
      ```
    - Read logs: `gh run view <run_id_from_url> --log 2>&1 | tail -100`
    - Analyze failure and attempt to fix.
@@ -342,7 +345,7 @@ ordered to avoid conflicts):
 
 6. **Update state:** increment round, save round summary, clear `ciFixFiles`,
    reset `ciAttempts` to 0, reset `lastReviewId` to null, reset
-   `consecutiveNoAction` to 0. Save state file.
+   `smartExit.consecutiveNoAction` to 0. Save state file.
 
 7. **Transition to COLLECT.**
 
@@ -368,7 +371,7 @@ ordered to avoid conflicts):
 
 Checked after every COLLECT with no new actionable comments:
 
-1. **`consecutiveNoAction >= 2`** — Two rounds with no accepted comments.
+1. **`smartExit.consecutiveNoAction >= 2`** — Two rounds with no accepted comments.
    Copilot has no more substantive feedback.
 
 2. **All comments minor + round >= 3** — After 3 rounds, only minor/style
@@ -477,9 +480,21 @@ but the canonical skill content above is shared.
 
 | Skill Reference | Codex Tool |
 |----------------|-----------|
-| `bash` / `gh` | Native shell tools |
-| `read file` | Native file tools |
-| `edit file` | Native file tools |
-| `write file` | Native file tools |
-| `spawn subagent` | `spawn_agent` |
+| `bash` / `gh` | shell execution tool such as `exec_command` |
+| `read file` | file read tools, or shell reads with `sed` / `rg` |
+| `edit file` | patch editing tool such as `apply_patch` |
+| `write state file` | patch editing tool; create `.copilot-review/` first if missing |
+| parallel read-only work | `multi_tool_use.parallel` when available |
+| task tracking | `update_plan` when available |
+| `spawn subagent` | `spawn_agent` / `wait_agent` if multi-agent tools are available |
 
+- **Invocation:** Codex may not expose slash-command routing. Treat
+  `/copilot-review <pr>`, `copilot-review <pr>`, and "use copilot-review for
+  PR <pr>" as the same skill invocation.
+- **Installation:** Codex must load this canonical `SKILL.md`. Keep
+  `adapters/codex.md` as supporting notes, not as the installed `SKILL.md`.
+- **Subagents:** If `spawn_agent` is not available, evaluate comments
+  sequentially and preserve the same state-machine transitions.
+- **Sandboxing:** If a required `gh`, `git`, or network command is blocked by
+  Codex sandboxing, save state and request the needed permission instead of
+  skipping the state transition.
