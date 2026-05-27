@@ -209,8 +209,6 @@ adapter changes can be validated consistently across agents.
 
 - Compatibility spec:
   `references/multi-agent-compatibility.md`
-- Validation plan:
-  `references/multi-agent-validation-plan.md`
 - Smoke skeleton:
   `tests/simulate-review-multi-agent.sh`
 
@@ -232,15 +230,19 @@ bash tests/validate-codex-compat.sh
 
 ```
 SKILL.md                         Canonical skill definition
+README.md                        User-facing documentation
 adapters/
   claude.md                      Claude Code adapter
-  copilot.md                     GitHub Copilot adapter
+  copilot.md                     GitHub Copilot (VS Code) adapter
   copilot-cli.md                 GitHub Copilot CLI adapter
   codex.md                       Codex adapter
 references/
   github-api.md                  gh command recipes
   evaluation-prompt.md           Comment evaluation prompt template
+  multi-agent-compatibility.md   Cross-agent behavior contract
 tests/
-  validate-codex-compat.sh       Local Codex packaging checks
-.copilot-review/          State files (one per PR, gitignored)
+  simulate-review.sh             API connectivity smoke test
+  simulate-review-multi-agent.sh Multi-agent baseline checks
+  validate-codex-compat.sh       Codex packaging contract check
+.copilot-review/                 State files (one per PR, gitignored)
 ```
