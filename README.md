@@ -204,13 +204,15 @@ section at the end of `SKILL.md`.
 
 ## Multi-Agent Validation
 
-This repository includes a shared compatibility contract and smoke skeleton so
+This repository includes a shared compatibility contract and test scripts so
 adapter changes can be validated consistently across agents.
 
 - Compatibility spec:
   `references/multi-agent-compatibility.md`
-- Smoke skeleton:
+- API smoke test:
   `tests/simulate-review-multi-agent.sh`
+- Adapter packaging check:
+  `tests/validate-adapters.sh`
 
 Run the smoke skeleton:
 
@@ -218,12 +220,10 @@ Run the smoke skeleton:
 ./tests/simulate-review-multi-agent.sh <agent> <pr-number>
 ```
 
-Supported agent values: `claude`, `copilot-vscode`, `copilot-cli`, `codex`.
-
-For Codex packaging changes that should not touch GitHub, run:
+Validate all adapters (no network needed):
 
 ```bash
-bash tests/validate-codex-compat.sh
+./tests/validate-adapters.sh
 ```
 
 ## File Structure
@@ -241,8 +241,7 @@ references/
   evaluation-prompt.md           Comment evaluation prompt template
   multi-agent-compatibility.md   Cross-agent behavior contract
 tests/
-  simulate-review.sh             API connectivity smoke test
-  simulate-review-multi-agent.sh Multi-agent baseline checks
-  validate-codex-compat.sh       Codex packaging contract check
+  simulate-review-multi-agent.sh API smoke test (all agents)
+  validate-adapters.sh           Adapter packaging checks (offline)
 .copilot-review/                 State files (one per PR, gitignored)
 ```
