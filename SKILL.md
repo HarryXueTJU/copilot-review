@@ -243,20 +243,45 @@ ordered to avoid conflicts):
    git push
    ```
 
-5. **Reply to GitHub thread** using the `replyText` from evaluation:
+5. **Reply to GitHub thread** using the `replyText` from evaluation.
+   Use `-F` (not `-f`) for `in_reply_to` to send it as a JSON number:
    ```bash
    gh api "/repos/{owner}/{repo}/pulls/{pr}/comments" \
      --method POST \
-     -f body="<replyText>" \
-     -f in_reply_to="{comment_id}"
+     -F body="<replyText>" \
+     -F in_reply_to=<comment_id>
    ```
 
-6. **Record in state:** Add entry to `handledComments` with `action: "accepted"`,
+6. **Resolve the review thread.** Accepted comments must be resolved so
+   they don't appear as open conversations on the PR. Look up the
+   thread's global node ID (different from the comment's node ID), then
+   call `resolveReviewThread`:
+   ```bash
+   # Get the PullRequestReviewThread ID for this comment
+   threadId=$(gh api graphql --raw-field 'query($owner:String!,$repo:String!,$pr:Int!){
+     repository(owner:$owner, name:$repo) {
+       pullRequest(number:$pr) {
+         reviewThreads(first:50) {
+           nodes { id comments(first:1) { nodes { databaseId } } }
+         }
+       }
+     }
+   }' -f owner="{owner}" -f repo="{repo}" -f pr=<pr> \
+     --jq ".data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].databaseId == <comment_id>) | .id")
+
+   gh api graphql --raw-field 'query=mutation($id: ID!) {
+     resolveReviewThread(input: { threadId: $id }) {
+       thread { isResolved }
+     }
+   }' -f id="$threadId"
+   ```
+
+7. **Record in state:** Add entry to `handledComments` with `action: "accepted"`,
    `commitSha` (from the commit), file, line, decision, severity, confidence.
 
-7. **If more accepted comments remain:** go to step 1 with next comment.
+8. **If more accepted comments remain:** go to step 1 with next comment.
 
-8. **All done:** Record round summary, transition to WAIT_CI.
+9. **All done:** Record round summary, transition to WAIT_CI.
 
 ### State: WAIT_CI
 
