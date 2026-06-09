@@ -182,7 +182,7 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
 
 7. **If no unhandled comments and `round == 0`:**
    No Copilot review has been triggered yet. Transition to RE_REQUEST to
-   post the initial `@copilot review this PR` comment.
+   request Copilot as a reviewer via `gh pr edit`.
 
 8. **If no unhandled comments and `round > 0`:**
    - Increment `smartExit.consecutiveNoAction` in state.
@@ -322,57 +322,18 @@ ordered to avoid conflicts):
 
 ### State: RE_REQUEST
 
-1. **Save existing reviewers.** `requestReviewsByLogin` may replace existing
-   review requests, so capture them first:
+1. **Request Copilot review using reviewer assignment (required):**
    ```bash
-   existing=$(gh api "repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
-     --jq '{users: [.users[].login], teams: [.teams[].slug]}')
+   gh pr edit {pr} --repo {owner}/{repo} --add-reviewer @copilot
    ```
+   This is the required re-request method. Do not use `@copilot` PR comments
+   as a substitute for requesting review.
 
-2. **Get PR node ID:**
-   ```bash
-   prId=$(gh pr view {pr} --repo {owner}/{repo} --json id --jq '.id')
-   ```
-
-3. **Request Copilot review via GraphQL:**
-   ```bash
-   gh api graphql --raw-field 'query=mutation($prId: ID!) {
-     requestReviewsByLogin(input: {
-       pullRequestId: $prId,
-       botLogins: ["copilot-pull-request-reviewer[bot]"]
-     }) { pullRequest { url } }
-   }' -f prId="$prId"
-   ```
-   This is the same GraphQL mutation the GitHub UI uses when clicking
-   "Request Copilot review". The `botLogins` field accepts Copilot's login
-   with the `[bot]` suffix — this is the key difference from the standard
-   `requestReviews` mutation which only accepts User nodes.
-
-4. **Restore existing reviewers** that may have been removed:
-   ```bash
-   # Re-add user reviewers
-   for user in $(echo "$existing" | jq -r '.users[]'); do
-     gh api "repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
-       --method POST -f "reviewers[]=$user" 2>/dev/null
-   done
-   # Re-add team reviewers
-   for team in $(echo "$existing" | jq -r '.teams[]'); do
-     gh api "repos/{owner}/{repo}/pulls/{pr}/requested_reviewers" \
-       --method POST -f "team_reviewers[]=$team" 2>/dev/null
-   done
-   ```
-
-5. **If GraphQL fails,** fall back to a PR comment:
-   ```bash
-   gh pr comment {pr} --repo {owner}/{repo} --body "@copilot review this PR"
-   ```
-   (The fallback does not disturb existing reviewers.)
-
-6. **Update state:** increment round, save round summary, clear `ciFixFiles`,
+2. **Update state:** increment round, save round summary, clear `ciFixFiles`,
    reset `ciAttempts` to 0, reset `lastReviewId` to null, reset
    `smartExit.consecutiveNoAction` to 0. Save state file.
 
-7. **Transition to COLLECT.**
+3. **Transition to COLLECT.**
 
 ### State: DONE
 

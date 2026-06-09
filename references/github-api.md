@@ -98,28 +98,14 @@ mutation($threadId: ID!) {
 
 ## Request Copilot Review (Re-request)
 
-Primary approach — use the same GraphQL mutation the GitHub UI uses:
+Required approach — request Copilot as a reviewer:
 
 ```bash
-prId=$(gh pr view {pr} --repo {owner}/{repo} --json id --jq '.id')
-gh api graphql --raw-field 'query=mutation($prId: ID!) {
-  requestReviewsByLogin(input: {
-    pullRequestId: $prId,
-    botLogins: ["copilot-pull-request-reviewer[bot]"]
-  }) { pullRequest { url } }
-}' -f prId="$prId"
+gh pr edit {pr} --repo {owner}/{repo} --add-reviewer @copilot
 ```
 
-The `botLogins` field accepts Copilot's login with the `[bot]` suffix — this is
-the key difference from the standard `requestReviews` mutation which only accepts
-User nodes. `copilot-pull-request-reviewer` is a Bot type (not User), so it must
-be requested via `botLogins`.
-
-If GraphQL fails, fall back to a PR comment:
-
-```bash
-gh pr comment {pr} --repo {owner}/{repo} --body "@copilot review this PR"
-```
+Do not use `@copilot` in a PR comment as a substitute for reviewer assignment.
+Comment mentions are not a reliable review trigger.
 
 ## Check for Merge Conflicts
 
