@@ -40,6 +40,13 @@ grep -q 'smartExit.consecutiveNoAction\|smartExit.*consecutiveNoAction' SKILL.md
   || fail "SKILL.md must reference nested smartExit.consecutiveNoAction counter"
 ok "smartExit counter uses nested path"
 
+# --- Copilot re-request polling cadence ---
+grep -q 'wait 3 minutes before the first poll' SKILL.md \
+  || fail "SKILL.md must wait 3 minutes before first Copilot re-request poll"
+grep -q 'Copilot feedback every 60 seconds' SKILL.md \
+  || fail "SKILL.md must use 60-second Copilot re-request polling"
+ok "Copilot re-request polling cadence"
+
 # --- No unsupported gh JSON fields ---
 if grep -q 'detailsUrl' SKILL.md 2>/dev/null; then
   fail "gh pr checks JSON field 'detailsUrl' is not supported; use 'link'"
