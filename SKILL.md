@@ -187,11 +187,12 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
 8. **If no unhandled comments and `round > 0`:**
    - Increment `smartExit.consecutiveNoAction` in state.
    - **Smart exit check:** If `smartExit.consecutiveNoAction >= 2`, transition to DONE.
-   - Otherwise: poll for new Copilot feedback every 30 seconds, up to 20
-     times (10 minutes total). On each poll, re-fetch reviews and comments
-     (steps 1-5). If Copilot responds within the window, process normally.
-     If all 20 polls pass with no response, record the timeout and
-     increment `smartExit.consecutiveNoAction`, then do the smart exit check.
+   - Otherwise: wait 3 minutes before the first poll, then poll for new
+     Copilot feedback every 60 seconds, up to 20 times. On each poll,
+     re-fetch reviews and comments (steps 1-5). If Copilot responds within
+     the window, process normally. If all 20 polls pass with no response,
+     record the timeout and increment `smartExit.consecutiveNoAction`, then
+     do the smart exit check.
 
 ### State: EVALUATE
 
