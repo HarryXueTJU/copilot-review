@@ -46,6 +46,19 @@ if grep -q 'detailsUrl' SKILL.md 2>/dev/null; then
 fi
 ok "no unsupported gh JSON fields"
 
+# --- Copilot re-request must use reviewer assignment ---
+grep -q 'gh pr edit {pr} --repo {owner}/{repo} --add-reviewer @copilot' SKILL.md \
+  || fail "SKILL.md must request Copilot review via gh pr edit --add-reviewer @copilot"
+grep -q 'gh pr edit <pr> --repo <owner>/<repo> --add-reviewer @copilot' README.md \
+  || fail "README must document gh pr edit --add-reviewer @copilot for review requests"
+grep -q 'gh pr edit {pr} --repo {owner}/{repo} --add-reviewer @copilot' references/github-api.md \
+  || fail "references/github-api.md must use gh pr edit --add-reviewer @copilot"
+
+if grep -q 'gh pr comment {pr} --repo {owner}/{repo} --body "@copilot review this PR"' SKILL.md references/github-api.md; then
+  fail "Do not use @copilot PR comments as the review request mechanism"
+fi
+ok "Copilot re-request command uses reviewer assignment"
+
 # --- Each adapter exists ---
 for agent in $AGENTS; do
   [ -f "adapters/$agent.md" ] || fail "missing adapters/$agent.md"

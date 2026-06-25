@@ -113,7 +113,7 @@ This feature requires a paid Copilot plan:
 
 For **Business / Enterprise** orgs, an admin must also enable the
 **Copilot code review** policy. Without this, Copilot won't appear in the
-reviewer picker and the GraphQL re-request will silently do nothing.
+reviewer picker and `gh pr edit --add-reviewer @copilot` won't take effect.
 
 Key behaviors to know:
 
@@ -143,12 +143,11 @@ Key behaviors to know:
   latest changes. The skill treats this as a positive signal and exits after
   two consecutive rounds with no new feedback.
 
-**`requestReviewsByLogin` GraphQL mutation fails:**
+**Review request doesn't trigger Copilot:**
 
-- Copilot is a Bot type, not a User. The mutation must use `botLogins`:
-  `["copilot-pull-request-reviewer[bot]"]`.
-- If the mutation fails, the skill falls back to posting `@copilot review
-  this PR` as a PR comment.
+- Use reviewer assignment, not a comment mention:
+  `gh pr edit <pr> --repo <owner>/<repo> --add-reviewer @copilot`.
+- `@copilot` in PR comments is not a reliable way to request a review.
 
 ## Usage
 
@@ -173,8 +172,8 @@ INIT → COLLECT → EVALUATE → IMPLEMENT → WAIT_CI → RE_REQUEST → COLLE
 - **EVALUATE** — Assess each comment independently. Accept or reject.
 - **IMPLEMENT** — Apply accepted changes, lint, commit, push, reply on GitHub.
 - **WAIT_CI** — Poll CI checks. Fix failures (up to 3 attempts).
-- **RE_REQUEST** — Request Copilot re-review via GraphQL. Preserves existing
-  reviewers.
+- **RE_REQUEST** — Request Copilot re-review via
+  `gh pr edit <pr> --add-reviewer @copilot`.
 - **DONE** — Smart exit: Copilot has no new comments for 2 consecutive rounds,
   or only minor comments remain after round 3.
 
